@@ -11,7 +11,7 @@ def text_to_speech_female(text):
 
     synthesis_input = texttospeech.SynthesisInput(text=text)
     uuid_ = uuid.uuid4()
-    output_file=f"Podcast/audio/female_{uuid_}.mp3"
+    output_file=f"src/audio/female_{uuid_}.mp3"
     voice = texttospeech.VoiceSelectionParams(
         language_code="en-US",
         name="en-US-Chirp-HD-F",
@@ -32,7 +32,7 @@ def text_to_speech_female(text):
         out.write(response.audio_content)
     
     print(f"Audio content written to {output_file}")
-    return f"Podcast/audio/female_{uuid_}.mp3"
+    return f"src/audio/female_{uuid_}.mp3"
 
 
 def text_to_speech_female_hindi(text):
@@ -40,7 +40,7 @@ def text_to_speech_female_hindi(text):
 
     synthesis_input = texttospeech.SynthesisInput(text=text)
     uuid_ = uuid.uuid4()
-    output_file=f"Podcast/audio/female_{uuid_}.mp3"
+    output_file=f"src/audio/female_{uuid_}.mp3"
     voice = texttospeech.VoiceSelectionParams(
         language_code="hi-IN",
         name="hi-IN-Chirp3-HD-Aoede",
@@ -61,7 +61,7 @@ def text_to_speech_female_hindi(text):
         out.write(response.audio_content)
     
     print(f"Audio content written to {output_file}")
-    return f"Podcast/audio/female_{uuid_}.mp3"
+    return f"src/audio/female_{uuid_}.mp3"
 
 
 def text_to_speech_male(text):
@@ -69,7 +69,7 @@ def text_to_speech_male(text):
 
     synthesis_input = texttospeech.SynthesisInput(text=text)
     uuid_ = uuid.uuid4()
-    output_file=f"Podcast/audio/male_{uuid_}.mp3"
+    output_file=f"src/audio/male_{uuid_}.mp3"
     voice = texttospeech.VoiceSelectionParams(
         language_code="en-US",
         name="en-US-Chirp-HD-D",
@@ -91,7 +91,7 @@ def text_to_speech_male(text):
 
 
     print(f"Audio content written to {output_file}")
-    return f"Podcast/audio/male_{uuid_}.mp3"
+    return f"src/audio/male_{uuid_}.mp3"
 
 
 
@@ -100,7 +100,7 @@ def text_to_speech_male_hindi(text):
 
     synthesis_input = texttospeech.SynthesisInput(text=text)
     uuid_ = uuid.uuid4()
-    output_file=f"Podcast/audio/male_{uuid_}.mp3"
+    output_file=f"src/audio/male_{uuid_}.mp3"
     voice = texttospeech.VoiceSelectionParams(
         language_code="hi-IN",
         name="hi-IN-Chirp3-HD-Charon",
@@ -122,7 +122,7 @@ def text_to_speech_male_hindi(text):
 
 
     print(f"Audio content written to {output_file}")
-    return f"Podcast/audio/male_{uuid_}.mp3"
+    return f"src/audio/male_{uuid_}.mp3"
 
 if __name__ == "__main__":
     start = time.time()

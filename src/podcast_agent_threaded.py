@@ -32,7 +32,7 @@ def podcast_1(user_name : str = "", pdf_content : str = "", current_stage : int 
     # print(prompt_template)
 
     response = client.models.generate_content(
-        model='gemini-2.0-flash-exp',
+        model='gemini-2.0-flash',
         contents=prompt_template,
         config={
             'response_mime_type': 'application/json',

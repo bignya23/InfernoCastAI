@@ -1,37 +1,32 @@
-import vertexai
-from vertexai.language_models import TextGenerationModel
-from extract import extract_text_from_pdf 
+from extract import extract_text_from_pdf
+from google import genai
+import os
 
-PROJECT_ID = "neurosphere-453417"
+def summarise():
+    text = extract_text_from_pdf() 
 
-def generate_summary(project_id, text):
-    """Generates a summary using Vertex AI's text generation model."""
-    
-    vertexai.init(project=project_id, location="us-central1")
+    api_key = os.getenv("GEMINI_API_KEY")  
+    if not api_key:
+        raise ValueError("API key not found. Set the GOOGLE_GENAI_API_KEY environment variable.")
 
-    parameters = {
-        "temperature": 0,
-        "max_output_tokens": 256,
-        "top_p": 0.95,
-        "top_k": 40,
-    }
+    client = genai.Client(api_key=api_key)
 
-    model = TextGenerationModel.from_pretrained("text-bison@002")
-    response = model.predict(text, **parameters)  # Pass text correctly
+    prompt = f"""
+    Summarize the following text in a clear and concise manner. 
+    - Capture the main ideas and key points.
+    - Avoid unnecessary details and repetition.
+    - Ensure readability and coherence.
 
-    print(f"Response from Model: {response.text}")
-    return response.text  # Return summary for further use
+    Text:
+    {text}
+    """
 
-def summary_generator():
-    extracted_text = extract_text_from_pdf()
+    response = client.models.generate_content(
+        model="gemini-2.0-flash",
+        contents=prompt,
+    )
 
-    # if extracted_text.strip():  # Ensure extracted text is not empty
-    #     summary = generate_summary(PROJECT_ID, extracted_text)
-    # else:
-    #     print("No text extracted from the PDF.")
+    return response.text
 
-    return extracted_text
-
-if __name__ == "__main__":
-    print(summary_generator())
-
+summary = summarise()
+print(summary)

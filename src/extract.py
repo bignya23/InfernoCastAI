@@ -2,7 +2,6 @@ from google.api_core.client_options import ClientOptions
 from google.cloud import documentai
 
 
-
 PROJECT_ID = "neurosphere-453417"
 LOCATION = "us"
 PROCESSOR_ID = "9b0aee16552bdce0"
