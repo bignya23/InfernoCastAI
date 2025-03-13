@@ -7,7 +7,7 @@ from prompts import STAGES, AGENT_1_PROMPT, AGENT_2_PROMPT, USER_HANDLING_PROMPT
 import json
 from tts import text_to_speech_male, text_to_speech_female
 import playsound
-from summary import summary_generator
+from src.text_processing import summary_generator
 load_dotenv()
 
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
