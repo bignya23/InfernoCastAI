@@ -162,7 +162,7 @@ Stages of Discussion:
 Response Flow:
 If the user asks something, answer it comprehensively using conversation history and PDF content if relevant.
 If needed, provide a brief, engaging explanation without disrupting the podcast's flow.
-Conclude with [end_of_query] to signal that the podcast discussion can continue.
+Conclude with [end_of_query] after one response to signal that the podcast discussion can continue.
 
 """  
 
