@@ -28,8 +28,6 @@ async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     
     
-    
-    
     # Create PodcastAgent instance
     podcast_agent = PodcastAgent()
     
