@@ -1,4 +1,4 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, UploadFile, File, Form
 import asyncio
 import json
 import uuid
@@ -7,13 +7,15 @@ import threading
 from src.conv_history import store_chat_history, get_chat_history
 from src.podcast_agent_threaded import PodcastAgent
 from src.user_handeling_agent import HandelUser
-from src.prompts import PDF_CONTENT
 from src.text_processing import TextProcessing
 from pydantic import BaseModel
+import shutil
+import os
 
 app = FastAPI()
 
 text_summary = ""
+text_processor = TextProcessing()
 
 
 @app.get("/")
@@ -21,24 +23,44 @@ async def root():
     return {"message": "Hello World"}
 
 
-class InputData(BaseModel):
-    file_path: str  
+class TextInput(BaseModel):
+    text: str  
 
 
 @app.post("/process-text")
-async def process_text(input_data: InputData):
-    
-    global text_summary
-
-    file_path = input_data.file_path
-    text_processor = TextProcessing()
-    if not file_path:
-        raise HTTPException(status_code=400, detail="file_path cannot be empty.")
+async def process_text(text: TextInput):
+    """
+    Endpoint to process plain text input.
+    """
+    if not text.text:
+        raise HTTPException(status_code=400, detail="Text cannot be empty.")
 
     try:
-        text_summary = text_processor.process_input(file_path)
-        return {"Response": "Summary Generated"}
+        summary = text_processor.summarise(text.text)
+        return {"summary": summary}
     
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/process-file")
+async def process_file(file: UploadFile = File(...)):
+    """
+    Endpoint to process a PDF file and extract text.
+    """
+    try:
+
+        temp_file_path = f"src/pdf_{uuid.uuid4()}.pdf"
+        with open(temp_file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        extracted_text = text_processor.extract_text_from_pdf(temp_file_path)
+
+        os.remove(temp_file_path)
+
+        summary = text_processor.summarise(extracted_text)
+        return {"summary": summary}
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     

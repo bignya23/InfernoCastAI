@@ -66,18 +66,18 @@ class TextProcessing:
 
         return response.text
 
-    def process_input(self, input_data):
-        """
-        Determines whether the input is a PDF file or plain text and processes accordingly.
-        """
-        if os.path.isfile(input_data) and input_data.endswith(".pdf"):
-            print("Detected PDF file. Extracting text...")
-            text = self.extract_text_from_pdf(input_data)
-        else:
-            print("Detected plain text input.")
-            text = input_data  
+    # def process_input(self, input_data):
+    #     """
+    #     Determines whether the input is a PDF file or plain text and processes accordingly.
+    #     """
+    #     if os.path.isfile(input_data) and input_data.endswith(".pdf"):
+    #         print("Detected PDF file. Extracting text...")
+    #         text = self.extract_text_from_pdf(input_data)
+    #     else:
+    #         print("Detected plain text input.")
+    #         text = input_data  
 
-        return self.summarise(text)
+    #     return self.summarise(text)
 
 
 if __name__ == "__main__":
