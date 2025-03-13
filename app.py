@@ -8,7 +8,9 @@ from src.conv_history import store_chat_history, get_chat_history
 from src.podcast_agent_threaded import PodcastAgent
 app = FastAPI()
 
-
+@app.get("/")
+def root():
+    return {"message": "Hello World"}
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
@@ -47,7 +49,7 @@ async def websocket_endpoint(websocket: WebSocket):
         try:
             conversation_history = get_chat_history(user_id)
 
-            # Play Alex's response while generating Emma's response & Alex's next TTS
+            # Play Alex's response while generating Emma's response and Alex's next TTS
             alex_tts_thread = threading.Thread(target=podcast_agent.generate_tts, args=(alex_output, "male", alex_tts_queue))
             emma_thread = threading.Thread(target=podcast_agent.generate_emma_response, args=(conversation_history, conversation_stage, emma_response_queue))
 
@@ -63,7 +65,7 @@ async def websocket_endpoint(websocket: WebSocket):
             emma_output, conversation_stage = emma_response_queue.get()
             store_chat_history(user_id, "Emma", emma_output, conversation_stage)
 
-            # Play Emma's response while generating Alex's next response & Emma's next TTS
+            # Play Emma's response while generating Alex's next response and Emma's next TTS
             conversation_history = get_chat_history(user_id)
             alex_thread = threading.Thread(target=podcast_agent.generate_alex_response, args=(conversation_history, conversation_stage, alex_response_queue))
             emma_tts_thread = threading.Thread(target=podcast_agent.generate_tts, args=(emma_output, "female", emma_tts_queue))
@@ -83,3 +85,5 @@ async def websocket_endpoint(websocket: WebSocket):
         except WebSocketDisconnect:
             print(f"User {user_id} disconnected")
             break
+
+

@@ -56,44 +56,40 @@ class HandelUser:
             file_path = text_to_speech_female_hindi(text)
         output_queue.put(file_path)
 
-``
+
 if __name__ == "__main__":
     conversation_history = ""
     conversation_stage = 0
     user_input = ""
 
-    user_input = input("User : ")
     conversation_history += f"User: {user_input}"
+
+    user_queue = queue.Queue()
     handleUser = HandelUser()
-    queue = queue.Queue()
-    alex = json.loads(handleUser.podcast_1(pdf_content=PDF_CONTENT, conversation_history=conversation_history,current_stage=conversation_stage, user_input=user_input, user_name="John"))
-    conversation_history += f"Alex: {alex['Alex_output']}"
-    conversation_stage = alex['conversation_stage']
+    while True:
+        user_input = input("User : ")
+        alex = json.loads(handleUser.podcast_1(pdf_content=PDF_CONTENT, conversation_history=conversation_history,current_stage=conversation_stage, user_input=user_input, user_name="John"))
+        conversation_history += f"User: {user_input}"
+        conversation_history += f"Alex: {alex['Alex_output']}"
+        conversation_history += f"Emma: {alex['Emma_output']}"
+        conversation_stage = alex['conversation_stage']
 
 
-    thread = threading.Thread(target=handleUser.generate_tts, args=(f"{alex["Emma_output"]}", "female", queue))
-    print(f"Alex: {alex['Alex_output']}")
-    print(f"emma: {alex['Emma_output']}")
-    file_path_male = text_to_speech_male_hindi(alex['Alex_output'])
-    thread.start()
-    print(conversation_stage)
-    playsound.playsound(sound=file_path_male)
-    print("\n\n")
-    
-    thread.join()
-    file_path_female = queue.get()
-    playsound.playsound(sound=file_path_female)
-    print("\n\n")
-    
-    
-    # emma = json.loads(podcast_1(pdf_content=PDF_CONTENT, conversation_history=conversation_history,current_stage=conversation_stage, user_input=user_input, user_name="John"))
-    # conversation_history += f"Emma: {emma['agent_output']}"
-    # conversation_stage = emma['conversation_stage']
-    # print(f"Emma: {emma['agent_output']}")
-    # print(conversation_stage)
-    # file_path_female = text_to_speech_female_hindi(emma['agent_output'])
-    # playsound.playsound(sound=file_path_female)
-    # print("\n\n")
-    
-    
-    
+        thread = threading.Thread(target=handleUser.generate_tts, args=(f"{alex["Emma_output"]}", "female", user_queue))
+        print(f"Alex: {alex['Alex_output']}")
+        print(f"emma: {alex['Emma_output']}")
+        file_path_male = text_to_speech_male_hindi(alex['Alex_output'])
+        thread.start()
+        print(conversation_stage)
+        playsound.playsound(sound=file_path_male)
+        print("\n\n")
+        
+        thread.join()
+        file_path_female = user_queue.get()
+        playsound.playsound(sound=file_path_female)
+        print("\n\n")
+        
+        
+        
+        
+        

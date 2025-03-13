@@ -3,13 +3,13 @@ from dotenv import load_dotenv
 import os
 from pydantic import BaseModel,TypeAdapter, Field
 from typing import List
-from prompts import STAGES, AGENT_1_PROMPT, AGENT_2_PROMPT, USER_HANDLING_PROMPT, PDF_CONTENT
+from .prompts import STAGES, AGENT_1_PROMPT, AGENT_2_PROMPT, USER_HANDLING_PROMPT, PDF_CONTENT
 import json
-from tts import text_to_speech_male, text_to_speech_female, text_to_speech_female_hindi, text_to_speech_male_hindi
+from .tts import text_to_speech_male, text_to_speech_female, text_to_speech_female_hindi, text_to_speech_male_hindi
 import playsound
 import threading
 import queue
-from conv_history import get_chat_history, store_chat_history
+from .conv_history import get_chat_history, store_chat_history
 import uuid
 # from summary import summary_generator
 load_dotenv()
