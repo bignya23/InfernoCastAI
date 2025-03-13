@@ -82,9 +82,11 @@ async def websocket_endpoint(websocket: WebSocket):
     store_chat_history(user_id, "Emma", emma_output, conversation_stage)
     podcast_agent.generate_tts(emma_output, "female", emma_tts_queue)
 
+
     # Preload Alex's next response (for smooth flow)
     conversation_history = get_chat_history(user_id)
     podcast_agent.generate_alex_response(conversation_history, conversation_stage, alex_response_queue)
+
 
     while True:
         try:
@@ -126,5 +128,4 @@ async def websocket_endpoint(websocket: WebSocket):
         except WebSocketDisconnect:
             print(f"User {user_id} disconnected")
             break
-
 

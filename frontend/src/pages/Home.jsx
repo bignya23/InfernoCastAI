@@ -53,6 +53,10 @@ const Home = () => {
     }
   };
 
+ const RecieveResponse = async ()=>{
+  const res = await axios.get("http://127.0.0.1:8000/ws")
+ }
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
