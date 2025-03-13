@@ -14,44 +14,49 @@ import queue
 
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
-
-class Agent(BaseModel):
-    conversation_stage : int = Field(description="Stage of the conversation")
-    Alex_output : str = Field(description="Current output of agent")
-    Emma_output : str = Field(description="Current output of agent")
+class HandelUser:
+    def __init__(self):
+        pass
 
 
-def podcast_1(user_name : str = "", pdf_content : str = "", current_stage : int = "", conversation_history : str = "", user_input : str = ""):
-    prompt_template = USER_HANDLING_PROMPT.format(
-        conversation_history=conversation_history,
-        current_stage=current_stage,
-        user_input=user_input,
-        pdf_content=pdf_content,
-        stages=STAGES,
-        user_name=user_name)
+    class Agent(BaseModel):
+        conversation_stage : int = Field(description="Stage of the conversation")
+        Alex_output : str = Field(description="Current output of agent")
+        Emma_output : str = Field(description="Current output of agent")
 
 
-    # print(prompt_template)
-
-    response = client.models.generate_content(
-        model='gemini-2.0-flash',
-        contents=prompt_template,
-        config={
-            'response_mime_type': 'application/json',
-            'response_schema': Agent,
-        },
-    )
-
-    return response.text
+    def podcast_1(self, user_name : str = "", pdf_content : str = "", current_stage : int = "", conversation_history : str = "", user_input : str = ""):
+        prompt_template = USER_HANDLING_PROMPT.format(
+            conversation_history=conversation_history,
+            current_stage=current_stage,
+            user_input=user_input,
+            pdf_content=pdf_content,
+            stages=STAGES,
+            user_name=user_name)
 
 
-def generate_tts(text, gender, output_queue):
-    if gender == "male":
-        file_path = text_to_speech_male_hindi(text)
-    else:
-        file_path = text_to_speech_female_hindi(text)
-    output_queue.put(file_path)
+        # print(prompt_template)
 
+        response = client.models.generate_content(
+            model='gemini-2.0-flash',
+            contents=prompt_template,
+            config={
+                'response_mime_type': 'application/json',
+                'response_schema': self.Agent,
+            },
+        )
+
+        return response.text
+
+
+    def generate_tts(self, text, gender, output_queue):
+        if gender == "male":
+            file_path = text_to_speech_male_hindi(text)
+        else:
+            file_path = text_to_speech_female_hindi(text)
+        output_queue.put(file_path)
+
+``
 if __name__ == "__main__":
     conversation_history = ""
     conversation_stage = 0
@@ -59,14 +64,14 @@ if __name__ == "__main__":
 
     user_input = input("User : ")
     conversation_history += f"User: {user_input}"
-    
+    handleUser = HandelUser()
     queue = queue.Queue()
-    alex = json.loads(podcast_1(pdf_content=PDF_CONTENT, conversation_history=conversation_history,current_stage=conversation_stage, user_input=user_input, user_name="John"))
+    alex = json.loads(handleUser.podcast_1(pdf_content=PDF_CONTENT, conversation_history=conversation_history,current_stage=conversation_stage, user_input=user_input, user_name="John"))
     conversation_history += f"Alex: {alex['Alex_output']}"
     conversation_stage = alex['conversation_stage']
 
 
-    thread = threading.Thread(target=generate_tts, args=(f"{alex["Emma_output"]}", "female", queue))
+    thread = threading.Thread(target=handleUser.generate_tts, args=(f"{alex["Emma_output"]}", "female", queue))
     print(f"Alex: {alex['Alex_output']}")
     print(f"emma: {alex['Emma_output']}")
     file_path_male = text_to_speech_male_hindi(alex['Alex_output'])
