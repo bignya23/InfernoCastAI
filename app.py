@@ -11,8 +11,21 @@ from src.text_processing import TextProcessing
 from pydantic import BaseModel
 import shutil
 import os
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+
+origins = [
+    "http://localhost:5173", 
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,  # Allow only specific origins
+    allow_credentials=True,  # Allow cookies & authentication
+    allow_methods=["*"],  # Allow all HTTP methods
+    allow_headers=["*"],  # Allow all headers
+)
 
 text_summary = ""
 text_processor = TextProcessing()
