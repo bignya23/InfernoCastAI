@@ -32,12 +32,13 @@ async def process_text(text: TextInput):
     """
     Endpoint to process plain text input.
     """
+    global text_summary
     if not text.text:
         raise HTTPException(status_code=400, detail="Text cannot be empty.")
 
     try:
-        summary = text_processor.summarise(text.text)
-        return {"summary": summary}
+        text_summary = text_processor.summarise(text.text)
+        return {"summary": text_summary}
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -49,7 +50,7 @@ async def process_file(file: UploadFile = File(...)):
     Endpoint to process a PDF file and extract text.
     """
     try:
-
+        global text_summary
         temp_file_path = f"src/pdf_{uuid.uuid4()}.pdf"
         with open(temp_file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
@@ -58,8 +59,8 @@ async def process_file(file: UploadFile = File(...)):
 
         os.remove(temp_file_path)
 
-        summary = text_processor.summarise(extracted_text)
-        return {"summary": summary}
+        text_summary = text_processor.summarise(extracted_text)
+        return {"summary": text_summary}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
