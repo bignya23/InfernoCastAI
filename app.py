@@ -12,12 +12,23 @@ app = FastAPI()
 def root():
     return {"message": "Hello World"}
 
+
+# Unique user session ID
+user_id = str(uuid.uuid4())
+
+
+@app.websocket("/ws_user")
+async def websocket_endpoint_user(websocket: WebSocket):
+    await websocket.accept()
+    
+    
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     
-    # Unique user session ID
-    user_id = str(uuid.uuid4())
+    
+    
     
     # Create PodcastAgent instance
     podcast_agent = PodcastAgent()
