@@ -13,6 +13,7 @@ const Demo = () => {
     socket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
+        console.log(data.audio)
         setMessages((prev) => [...prev, data]);
 
         if (data.audio) {
@@ -35,7 +36,7 @@ const Demo = () => {
     return () => {
       if (socket) socket.close();
     };
-  }, []);
+  });
 
   const playAudio = (audioUrl) => {
     if (audioRef.current.src !== audioUrl) {

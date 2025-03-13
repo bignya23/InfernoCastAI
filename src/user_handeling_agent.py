@@ -1,4 +1,4 @@
-from prompts import USER_HANDLING_PROMPT, STAGES, PDF_CONTENT
+from .prompts import USER_HANDLING_PROMPT, STAGES, PDF_CONTENT
 from google import genai
 from dotenv import load_dotenv
 import os
@@ -7,8 +7,8 @@ from typing import List
 import json
 import playsound
 import threading
-from tts import text_to_speech_male, text_to_speech_female, text_to_speech_female_hindi, text_to_speech_male_hindi
-from conv_history import get_chat_history, store_chat_history
+from .tts import text_to_speech_male, text_to_speech_female, text_to_speech_female_hindi, text_to_speech_male_hindi
+from .conv_history import get_chat_history, store_chat_history
 # from summary import summary_generator
 load_dotenv()
 import queue
@@ -87,7 +87,7 @@ if __name__ == "__main__":
         thread = threading.Thread(target=handleUser.generate_tts, args=(emma_output, "female", user_tts_queue))
         print(f"Alex: {alex_output}")
         print(f"Emma: {emma_output}")
-        
+
         handleUser.generate_tts(alex_output, "male", user_tts_queue)
         file_path_male = user_tts_queue.get()
         thread.start()

@@ -72,10 +72,13 @@ class PodcastAgent:
     def generate_alex_response(self, conversation_history, conversation_stage, output_queue):
         alex = json.loads(self.podcast_1(pdf_content=PDF_CONTENT, conversation_history=conversation_history, current_stage=conversation_stage))
         output_queue.put((alex['agent_output'], alex['conversation_stage']))
+        print(f"{alex['agent_output']}, {alex['conversation_stage']}")
+
 
     def generate_emma_response(self, conversation_history, conversation_stage, output_queue):
         emma = json.loads(self.podcast_2(pdf_content=PDF_CONTENT, conversation_history=conversation_history, current_stage=conversation_stage))
         output_queue.put((emma['agent_output'], emma['conversation_stage']))
+        print(f"{emma['agent_output']}, {emma['conversation_stage']}")
 
     def generate_tts(self, text, gender, output_queue):
         if gender == "male":
