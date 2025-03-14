@@ -12,7 +12,9 @@ from pydantic import BaseModel
 import shutil
 import os
 from fastapi.middleware.cors import CORSMiddleware
-
+from google.cloud import speech
+import webrtcvad
+from typing import List
 app = FastAPI()
 
 origins = [
@@ -35,6 +37,80 @@ text_processor = TextProcessing()
 async def root():
     return {"message": "Hello World"}
 
+
+# Audio settings
+RATE = 16000
+CHUNK = int(RATE / 10)  # 100ms
+
+# Voice Activity Detector
+vad = webrtcvad.Vad(2)  # 0 (aggressive) to 3 (sensitive)
+
+# WebSocket endpoint
+@app.websocket("/ws/audio")
+async def websocket_endpoint_audio(websocket: WebSocket):
+    await websocket.accept()
+    print("WebSocket connection established for audio")
+    
+    client = speech.SpeechClient()
+    config = speech.RecognitionConfig(
+        encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
+        sample_rate_hertz=RATE,
+        language_code="hi-IN"
+    )
+    streaming_config = speech.StreamingRecognitionConfig(config=config, interim_results=True)
+    
+    audio_queue = queue.Queue()
+    silence_counter = 0
+    speaking = False
+    buffer: List[bytes] = []
+
+    async def request_generator():
+        while True:
+            chunk = audio_queue.get()
+            if chunk is None:
+                break
+            yield speech.StreamingRecognizeRequest(audio_content=chunk)
+
+    responses = client.streaming_recognize(streaming_config, request_generator())
+    
+    async def process_responses():
+        final_transcription = ""
+        try:
+            for response in responses:
+                for result in response.results:
+                    if result.is_final:
+                        final_transcription += result.alternatives[0].transcript + " "
+                    await websocket.send_text(result.alternatives[0].transcript)
+        except Exception as e:
+            print(f"Error processing response: {e}")
+        return final_transcription.strip()
+    
+    processing_task = asyncio.create_task(process_responses())
+    
+    try:
+        while True:
+            data = await websocket.receive_bytes()
+            buffer.append(data)
+            audio_queue.put(data)
+
+            # Silence detection
+            is_speech = vad.is_speech(data, RATE)
+            if is_speech:
+                speaking = True
+                silence_counter = 0
+            elif speaking:
+                silence_counter += 1
+                if silence_counter > 20:  # 2 seconds (20 * 100ms)
+                    print("Silence detected, ending stream...")
+                    audio_queue.put(None)
+                    final_text = await processing_task
+                    print(final_text)
+                    audio_queue.empty()
+                    await websocket.send_text(f"FINAL: {final_text}")
+                    await websocket.close()
+                    break
+    except WebSocketDisconnect:
+        print("WebSocket disconnected")
 
 class TextInput(BaseModel):
     text: str  
@@ -169,7 +245,9 @@ async def websocket_endpoint(websocket: WebSocket):
             await emma_task
 
             response = await websocket.receive_json()
-            print(response)
+            if(response['message'] == "Chunks"):
+                
+             print(response)
 
             # str_response = json.loads(response)
             #print(str_response)
