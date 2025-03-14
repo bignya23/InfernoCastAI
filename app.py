@@ -148,13 +148,13 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         # Generate initial response
         await podcast_agent.generate_alex_response("", "1", alex_response_queue, pdf_content=text_summary)
-        alex_output, conversation_stage = await alex_response_queue.get()
+        alex_output, conversation_stage = alex_response_queue.get()
         store_chat_history(user_id, "Alex", alex_output, conversation_stage)
         await podcast_agent.generate_tts(alex_output, "male", alex_tts_queue)
 
         conversation_history = get_chat_history(user_id)
         await podcast_agent.generate_emma_response(conversation_history, conversation_stage, emma_response_queue, pdf_content=text_summary)
-        emma_output, conversation_stage = await emma_response_queue.get()
+        emma_output, conversation_stage = emma_response_queue.get()
         store_chat_history(user_id, "Emma", emma_output, conversation_stage)
         await podcast_agent.generate_tts(emma_output, "female", emma_tts_queue)
 
@@ -168,22 +168,23 @@ async def websocket_endpoint(websocket: WebSocket):
             alex_tts_task = asyncio.create_task(podcast_agent.generate_tts(alex_output, "male", alex_tts_queue))
             emma_task = asyncio.create_task(podcast_agent.generate_emma_response(conversation_history, conversation_stage, emma_response_queue, text_summary))
 
-            file_path_male = await alex_tts_queue.get()
+            file_path_male = alex_tts_queue.get()
             await websocket.send_json({"speaker": "Alex", "text": alex_output, "audio": file_path_male, "stage": conversation_stage})
 
             await alex_tts_task
             await emma_task
 
-            await websocket.receive_json()
+            res=await websocket.receive_json()
+            print(res)
 
-            emma_output, conversation_stage = await emma_response_queue.get()
+            emma_output, conversation_stage = emma_response_queue.get()
             store_chat_history(user_id, "Emma", emma_output, conversation_stage)
 
             # Generate and play Emma's response
             alex_task = asyncio.create_task(podcast_agent.generate_alex_response(conversation_history, conversation_stage, alex_response_queue, text_summary))
             emma_tts_task = asyncio.create_task(podcast_agent.generate_tts(emma_output, "female", emma_tts_queue))
 
-            file_path_female = await emma_tts_queue.get()
+            file_path_female = emma_tts_queue.get()
             await websocket.send_json({"speaker": "Emma", "text": emma_output, "audio": file_path_female, "stage": conversation_stage})
 
             await emma_tts_task
@@ -191,7 +192,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
             await websocket.receive_json()
 
-            alex_output, conversation_stage = await alex_response_queue.get()
+            alex_output, conversation_stage = alex_response_queue.get()
             store_chat_history(user_id, "Alex", alex_output, conversation_stage)
 
     except WebSocketDisconnect:

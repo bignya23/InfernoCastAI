@@ -83,7 +83,7 @@ class TextProcessing:
 if __name__ == "__main__":
 
 
-    file_path = ""
+    file_path = r"/Users/probindhakal/Desktop/InfernoCastAI/src/eCnTrHaiSC.pdf"
     text_processor = TextProcessing()
     summary = text_processor.process_input(file_path)
     
