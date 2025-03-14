@@ -5,8 +5,8 @@ import Demo from './pages/Demo'
 const App = () => {
   return (
     <div>
-     <Home /> 
-    
+     {/* <Home /> */}
+     <Demo />
     </div>
   )
 }

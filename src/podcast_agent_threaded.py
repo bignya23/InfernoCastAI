@@ -9,7 +9,6 @@ from .tts import text_to_speech_male, text_to_speech_female, text_to_speech_fema
 import playsound
 import threading
 import queue
-import asyncio
 from .conv_history import get_chat_history, store_chat_history
 import uuid
 # from summary import summary_generator
@@ -69,44 +68,23 @@ class PodcastAgent:
         return response.text
 
 
-    async def generate_alex_response(self, conversation_history, conversation_stage, output_queue, pdf_content):
-        loop = asyncio.get_running_loop()
-        alex_response = await loop.run_in_executor(
-            None,  
-            self.podcast_1,  
-            pdf_content, conversation_history, conversation_stage
-        )
 
-        if alex_response:
-            alex = json.loads(alex_response)
-            output_queue.put((alex.get('agent_output', ''), alex.get('conversation_stage', '')))
-        else:
-            output_queue.put(("No response generated", conversation_stage))
-
-    async def generate_emma_response(self, conversation_history, conversation_stage, output_queue, pdf_content):
-        loop = asyncio.get_running_loop()
-        emma_response = await loop.run_in_executor(
-            None,  
-            self.podcast_2,  
-            pdf_content, conversation_history, conversation_stage
-        )
-
-        if emma_response:
-            emma = json.loads(emma_response)
-            output_queue.put((emma.get('agent_output', ''), emma.get('conversation_stage', '')))
-        else:
-            output_queue.put(("No response generated", conversation_stage))
+    def generate_alex_response(self, conversation_history, conversation_stage, output_queue, pdf_content):
+        alex = json.loads(self.podcast_1(pdf_content=pdf_content, conversation_history=conversation_history, current_stage=conversation_stage))
+        output_queue.put((alex['agent_output'], alex['conversation_stage']))
+        print(f"{alex['agent_output']}, {alex['conversation_stage']}")
 
 
-    async def generate_tts(self, text, gender, output_queue):
-        loop = asyncio.get_running_loop()
-        
-        # Run the TTS function in a separate thread to avoid blocking the event loop
+    def generate_emma_response(self, conversation_history, conversation_stage, output_queue, pdf_content):
+        emma = json.loads(self.podcast_2(pdf_content=pdf_content, conversation_history=conversation_history, current_stage=conversation_stage))
+        output_queue.put((emma['agent_output'], emma['conversation_stage']))
+        print(f"{emma['agent_output']}, {emma['conversation_stage']}")
+
+    def generate_tts(self, text, gender, output_queue):
         if gender == "male":
-            file_path = await loop.run_in_executor(None, text_to_speech_male_hindi, text)
+            file_path = text_to_speech_male_hindi(text)
         else:
-            file_path = await loop.run_in_executor(None, text_to_speech_female_hindi, text)
-
+            file_path = text_to_speech_female_hindi(text)
         output_queue.put(file_path)
 
 
@@ -124,7 +102,7 @@ if __name__ == "__main__":
     podcast_agent.generate_alex_response("", "1", alex_response_queue)
     alex_output, conversation_stage = alex_response_queue.get()
     store_chat_history(user_id=id, agent_name="Alex", agent_response= alex_output, agent_conversation_stage=conversation_stage)
-    #print(f"Alex : {alex_output} Stage : {conversation_stage}")
+    print(f"Alex : {alex_output} Stage : {conversation_stage}")
     podcast_agent.generate_tts(alex_output, "male", alex_tts_queue)
 
     # Preload Emma's first response & TTS
@@ -134,7 +112,7 @@ if __name__ == "__main__":
     podcast_agent.generate_emma_response(conversation_history, conversation_stage, emma_response_queue)
     emma_output, conversation_stage = emma_response_queue.get()
     store_chat_history(user_id=id, agent_name="Emma", agent_response= emma_output, agent_conversation_stage=conversation_stage)
-    #print(f"Emma : {emma_output} Stage : {conversation_stage}")
+    print(f"Emma : {emma_output} Stage : {conversation_stage}")
     podcast_agent.generate_tts(emma_output, "female", emma_tts_queue)
 
     # Generates Alex next response
@@ -157,7 +135,7 @@ if __name__ == "__main__":
 
         file_path_male = alex_tts_queue.get()
 
-        #print(f"Alex: {alex_output} Stage : {conversation_stage}")
+        print(f"Alex: {alex_output} Stage : {conversation_stage}")
         playsound.playsound(file_path_male)
 
         alex_tts_thread.join()
@@ -176,7 +154,7 @@ if __name__ == "__main__":
 
         file_path_female = emma_tts_queue.get()
 
-        #print(f"Emma: {emma_output} Stage : {conversation_stage}")
+        print(f"Emma: {emma_output} Stage : {conversation_stage}")
         playsound.playsound(file_path_female)
 
         emma_tts_thread.join()
