@@ -140,10 +140,10 @@ async def websocket_endpoint(websocket: WebSocket):
     active_users[user_id] = websocket  
 
     podcast_agent = PodcastAgent()
-    alex_response_queue = asyncio.Queue()
-    emma_response_queue = asyncio.Queue()
-    alex_tts_queue = asyncio.Queue()
-    emma_tts_queue = asyncio.Queue()
+    alex_response_queue = queue.Queue()
+    emma_response_queue = queue.Queue()
+    alex_tts_queue = queue.Queue()
+    emma_tts_queue = queue.Queue()
 
     try:
         # Generate initial response

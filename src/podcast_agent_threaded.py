@@ -11,6 +11,8 @@ import threading
 import queue
 from .conv_history import get_chat_history, store_chat_history
 import uuid
+import asyncio
+
 # from summary import summary_generator
 load_dotenv()
 
@@ -69,23 +71,44 @@ class PodcastAgent:
 
 
 
-    def generate_alex_response(self, conversation_history, conversation_stage, output_queue, pdf_content):
-        alex = json.loads(self.podcast_1(pdf_content=pdf_content, conversation_history=conversation_history, current_stage=conversation_stage))
-        output_queue.put((alex['agent_output'], alex['conversation_stage']))
-        print(f"{alex['agent_output']}, {alex['conversation_stage']}")
 
+    async def generate_alex_response(self, conversation_history, conversation_stage, output_queue, pdf_content):
+        loop = asyncio.get_running_loop()
+        alex_response = await loop.run_in_executor(
+            None,  
+            self.podcast_1,  
+            pdf_content, conversation_history, conversation_stage
+        )
 
-    def generate_emma_response(self, conversation_history, conversation_stage, output_queue, pdf_content):
-        emma = json.loads(self.podcast_2(pdf_content=pdf_content, conversation_history=conversation_history, current_stage=conversation_stage))
-        output_queue.put((emma['agent_output'], emma['conversation_stage']))
-        print(f"{emma['agent_output']}, {emma['conversation_stage']}")
-
-    def generate_tts(self, text, gender, output_queue):
-        if gender == "male":
-            file_path = text_to_speech_male_hindi(text)
+        if alex_response:
+            alex = json.loads(alex_response)
+            output_queue.put((alex.get('agent_output', ''), alex.get('conversation_stage', '')))
         else:
-            file_path = text_to_speech_female_hindi(text)
-        output_queue.put(file_path)
+            output_queue.put(("No response generated", conversation_stage))
+
+    async def generate_emma_response(self, conversation_history, conversation_stage, output_queue, pdf_content):
+        loop = asyncio.get_running_loop()
+        emma_response = await loop.run_in_executor(
+            None,  
+            self.podcast_2,  
+            pdf_content, conversation_history, conversation_stage
+        )
+
+        if emma_response:
+            emma = json.loads(emma_response)
+            output_queue.put((emma.get('agent_output', ''), emma.get('conversation_stage', '')))
+        else:
+            output_queue.put(("No response generated", conversation_stage))
+
+    async def generate_tts(self, text, gender, output_queue):
+         loop = asyncio.get_running_loop()
+         
+         if gender == "male":
+             file_path = await loop.run_in_executor(None, text_to_speech_male_hindi, text)
+         else:
+             file_path = await loop.run_in_executor(None, text_to_speech_female_hindi, text)
+ 
+         output_queue.put(file_path)
 
 
 if __name__ == "__main__":    
