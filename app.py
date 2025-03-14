@@ -79,59 +79,52 @@ async def process_file(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=str(e))
     
 
-# Store active WebSocket connections
 active_users = {}
 
-@app.websocket("/ws-user")
-async def websocket_endpoint_user(websocket: WebSocket):
-    await websocket.accept()
 
-    # Generate a unique user_id for this session
-    user_id = str(uuid.uuid4())
-    active_users[user_id] = websocket  # Store the user's connection
+async def endpoint_user(user_id, websocket : WebSocket):
 
     user_tts_queue = queue.Queue()
     user_output_queue = queue.Queue()
     handleUser = HandelUser()
     conversation_stage = 0
     
-    try:
-        while True:
-            user_input = await websocket.receive_text()  # Receive user input via WebSocket
-            conversation_history = get_chat_history(user_id)
+    
+    while True:
+        print("user called ")
+        user_input = input("user : ")
+        conversation_history = get_chat_history(user_id)
+        store_chat_history(user_id, "User", user_input, conversation_stage)
+        conversation_history = get_chat_history(user_id)
+        await handleUser.generate_agent_response(conversation_history, conversation_stage, user_output_queue, pdf_content = text_summary)
+        alex_output, conversation_stage, emma_output = user_output_queue.get()
+        # Store history per user
+        store_chat_history(user_id, "Alex", alex_output, conversation_stage)
+        store_chat_history(user_id, "Emma", emma_output, conversation_stage)
+        # Generate text-to-speech for both responses
+        alex_tts_task = asyncio.create_task(handleUser.generate_tts(text = alex_output, gender= "male", output_queue=user_tts_queue) )
+    
+        
+        await alex_tts_task
+        file_path_male = user_tts_queue.get()
+        print(alex_output)
+        await websocket.send_json({"speaker": "Alex", "text": alex_output, "audio": file_path_male, "stage": conversation_stage})
+        emma_tts_task = asyncio.create_task(handleUser.generate_tts(text = emma_output, gender= "female", output_queue=user_tts_queue) )
 
-            handleUser.generate_agent_response(conversation_history, conversation_stage, user_output_queue)
-            alex_output, conversation_stage, emma_output = user_output_queue.get()
+        print("alex done")
+        await emma_tts_task
+        await websocket.receive_json()
 
-            # Store history per user
-            store_chat_history(user_id, "User", user_input, conversation_stage)
-            store_chat_history(user_id, "Alex", alex_output, conversation_stage)
-            store_chat_history(user_id, "Emma", emma_output, conversation_stage)
+        file_path_female = user_tts_queue.get()
+        await websocket.send_json({"speaker": "Emma", "text": emma_output, "audio": file_path_female, "stage": conversation_stage})
+        print(emma_output)
+        await websocket.receive_json()
 
-            # Generate text-to-speech for both responses
-            alex_tts_thread = threading.Thread(target=handleUser.generate_tts, args=(alex_output, "male", user_tts_queue))
-            emma_tts_thread = threading.Thread(target=handleUser.generate_tts, args=(emma_output, "female", user_tts_queue))
-
-            alex_tts_thread.start()
-            emma_tts_thread.start()
-
-            alex_tts_thread.join()
-            file_path_male = user_tts_queue.get()
-
-            await websocket.send_json({"speaker": "Alex", "text": alex_output, "audio": file_path_male, "stage": conversation_stage})
-
-            emma_tts_thread.join()
-            file_path_female = user_tts_queue.get()
-            await websocket.receive_json()
-
-            await websocket.send_json({"speaker": "Emma", "text": emma_output, "audio": file_path_female, "stage": conversation_stage})
-
-    except WebSocketDisconnect:
-        print(f"User {user_id} disconnected")
-        del active_users[user_id]  
-
+        if emma_output.endswith("[end_of_query]"):
+            break
 
 
+    
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
@@ -161,6 +154,7 @@ async def websocket_endpoint(websocket: WebSocket):
         conversation_history = get_chat_history(user_id)
         await podcast_agent.generate_alex_response(conversation_history, conversation_stage, alex_response_queue, pdf_content=text_summary)
 
+
         while True:
             conversation_history = get_chat_history(user_id)
 
@@ -174,8 +168,15 @@ async def websocket_endpoint(websocket: WebSocket):
             await alex_tts_task
             await emma_task
 
-            res=await websocket.receive_json()
-            print(res)
+            response = await websocket.receive_json()
+            print(response)
+
+            # str_response = json.loads(response)
+            #print(str_response)
+            if response['message'] == "Yes":
+                await endpoint_user(user_id, websocket)
+                print("loop ended")
+
 
             emma_output, conversation_stage = emma_response_queue.get()
             store_chat_history(user_id, "Emma", emma_output, conversation_stage)
@@ -190,7 +191,13 @@ async def websocket_endpoint(websocket: WebSocket):
             await emma_tts_task
             await alex_task
 
-            await websocket.receive_json()
+            response = await websocket.receive_json()
+            print(response)
+
+            # str_response = json.loads(response)
+            if response['message'] == "Yes":
+                await endpoint_user(user_id, websocket)
+                print("loop ended")
 
             alex_output, conversation_stage = alex_response_queue.get()
             store_chat_history(user_id, "Alex", alex_output, conversation_stage)

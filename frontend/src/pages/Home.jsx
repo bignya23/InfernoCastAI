@@ -16,12 +16,11 @@ const Home = () => {
   const audioChunks = useRef([]);
   const [alexAudio, setAlexAudio] = useState(null);
   const [emmaAudio, setEmmaAudio] = useState(null);
-  const [isAudioPlaying, setIsAudioPlaying] = useState(false); // New state to track audio playback
-
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const [currentAudio, setCurrentAudio] = useState(null);
   const currentAudioRef = useRef(null);
 
   useEffect(() => {
-    // Add welcome message on component mount
     setMessages([
       {
         type: "ai",
@@ -33,7 +32,6 @@ const Home = () => {
   }, []);
 
   useEffect(() => {
-    // Scroll to bottom when messages update
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
@@ -65,7 +63,6 @@ const Home = () => {
       let response;
 
       if (input) {
-        // Sending text input to /process-text
         response = await fetch("http://localhost:8000/process-text", {
           method: "POST",
           headers: {
@@ -74,7 +71,6 @@ const Home = () => {
           body: JSON.stringify({ text: input }),
         });
       } else if (file) {
-        // Sending file input to /process-file
         const formData = new FormData();
         formData.append("file", file);
 
@@ -85,10 +81,8 @@ const Home = () => {
       }
 
       const result = await response.json();
-      console.log(result);
       if (!response.ok) throw new Error(result.detail);
 
-      // Add AI response to messages
       setMessages((prev) => [
         ...prev,
         {
@@ -114,6 +108,7 @@ const Home = () => {
       setFile(null);
     }
   };
+
   const [socket, setSocket] = useState(null);
 
   const startPodcast = () => {
@@ -121,52 +116,56 @@ const Home = () => {
       console.log("WebSocket is already connected.");
       return;
     }
-  
+
     const newSocket = new WebSocket("ws://127.0.0.1:8000/ws");
-  
+
     newSocket.onopen = () => {
       console.log("WebSocket connection established");
-      // newSocket.send(JSON.stringify({ message: "Start Podcast" }));
     };
-  
+
     newSocket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        console.log("received: ", data.audio);
-        console.log(data.speaker);
-  
+
+        if (isRecording && newSocket.readyState === WebSocket.OPEN) {
+          console.log("Recording is active, sending immediate response...");
+          newSocket.send(JSON.stringify({ message: "Yes" }));
+        }
+
         if (data.audio) {
           const audio = new Audio(data.audio);
-          setIsAudioPlaying(true); // Set audio playing to true
-  
+          setIsAudioPlaying(true);
+
           audio.onended = () => {
-            setIsAudioPlaying(false); // Set audio playing to false when ended
+            setIsAudioPlaying(false);
             console.log("Audio playback completed.");
-  
-            // Send a "done" message to the backend after audio finishes
-            if (newSocket && newSocket.readyState === WebSocket.OPEN) {
-              newSocket.send(JSON.stringify({ message: "Audio playback done" }));
+
+            if (newSocket.readyState === WebSocket.OPEN) {
+              newSocket.send(
+                JSON.stringify({ message: "Audio playback done" })
+              );
             }
           };
-  
+
           audio.play();
+          setCurrentAudio(audio);
         }
       } catch (error) {
         console.error("Error processing WebSocket message:", error);
       }
     };
-  
+
     newSocket.onclose = (event) => {
       console.log("WebSocket closed:", event.reason);
     };
-  
+
     newSocket.onerror = (error) => {
       console.error("WebSocket Error:", error);
     };
-  
-    setSocket(newSocket); // Store the socket in state
+
+    setSocket(newSocket);
   };
-  
+
   useEffect(() => {
     return () => {
       if (socket) {
@@ -174,8 +173,18 @@ const Home = () => {
       }
     };
   }, [socket]);
-  
 
+  const handleJoinConversation = () => {
+    if (currentAudio) {
+      currentAudio.pause();
+      setCurrentAudio(null);
+      setIsAudioPlaying(false);
+    }
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({ message: "Yes" }));
+      setIsRecording(true);
+    }
+  };
   return (
     <div className="flex h-screen bg-gray-900 text-gray-200 overflow-hidden">
       {/* Left Panel - 40% width */}
@@ -514,7 +523,7 @@ const Home = () => {
           </button>
 
           {/* Join Conversation Button */}
-          <button
+          {/* <button
             className={`w-1/2 py-3 px-4 rounded-lg font-medium flex items-center justify-center ${
               isRecording
                 ? "bg-red-600 hover:bg-red-700 text-white animate-pulse"
@@ -540,7 +549,10 @@ const Home = () => {
                 Recording... (Stops after 5s of silence)
               </span>
             ) : (
-              <span className="flex items-center">
+              <span
+                className="flex items-center"
+                onClick={() => setIsRecording(true)}
+              >
                 <svg
                   className="w-5 h-5 mr-2"
                   fill="none"
@@ -558,6 +570,13 @@ const Home = () => {
                 Join Conversation
               </span>
             )}
+          </button> */}
+
+          <button
+            className="bg-red-500 p-2 rounded-md"
+            onClick={handleJoinConversation}
+          >
+            Join Conversation
           </button>
         </div>
       </div>

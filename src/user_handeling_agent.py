@@ -9,6 +9,7 @@ import playsound
 import threading
 from .tts import text_to_speech_male, text_to_speech_female, text_to_speech_female_hindi, text_to_speech_male_hindi
 from .conv_history import get_chat_history, store_chat_history
+import asyncio
 # from summary import summary_generator
 load_dotenv()
 import queue
@@ -50,23 +51,23 @@ class HandelUser:
         return response.text
 
 
-    def generate_tts(self, text, gender, output_queue):
+    async def generate_tts(self, text, gender, output_queue):
+        loop = asyncio.get_running_loop()
+
         if gender == "male":
-            file_path = text_to_speech_male_hindi(text)
+            file_path = await loop.run_in_executor(None, text_to_speech_male_hindi, text)
         else:
-            file_path = text_to_speech_female_hindi(text)
+            file_path = await loop.run_in_executor(None, text_to_speech_female_hindi, text)
+
         output_queue.put(file_path)
 
-    def generate_agent_response(self, conversation_history, conversation_stage, output_queue):
-        agent_output = json.loads(self.podcast_1(pdf_content=PDF_CONTENT, conversation_history=conversation_history, current_stage=conversation_stage))
+    async def generate_agent_response(self, conversation_history, conversation_stage, output_queue, pdf_content):
+        loop = asyncio.get_running_loop()
+        agent_output = await loop.run_in_executor(None, self.podcast_1, pdf_content, conversation_history, conversation_stage)
+
+        agent_output = json.loads(agent_output)
         output_queue.put((agent_output['Alex_output'], agent_output['conversation_stage'], agent_output['Emma_output']))
 
-    def generate_tts(self, text, gender, output_queue):
-        if gender == "male":
-            file_path = text_to_speech_male_hindi(text)
-        else:
-            file_path = text_to_speech_female_hindi(text)
-        output_queue.put(file_path)
 
 if __name__ == "__main__":
     user_tts_queue = queue.Queue()
