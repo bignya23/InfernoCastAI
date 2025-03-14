@@ -4,7 +4,7 @@ import time
 import uuid
 
 # Set the path to your JSON key file
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = r"C:\Users\bigny\OneDrive\Desktop\NeuroSphereAI\New folder\NeuroSphereAI\neurosphere-453417-a13fa049f648.json"
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = r"/Users/probindhakal/Desktop/InfernoCastAI/neurosphere-453417-a13fa049f648.json"
 
 def text_to_speech_female(text):
     client = texttospeech.TextToSpeechClient()

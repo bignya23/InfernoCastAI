@@ -4,7 +4,7 @@ import pyaudio
 from google.cloud import speech
 
 # Set Google API Key (if not already set in environment)
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = r"C:\Users\bigny\OneDrive\Desktop\NeuroSphereAI\New folder\NeuroSphereAI\neurosphere-453417-a13fa049f648.json"
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = r"/Users/probindhakal/Desktop/InfernoCastAI/neurosphere-453417-a13fa049f648.json"
 
 # Audio recording settings
 RATE = 16000  # Sample rate
