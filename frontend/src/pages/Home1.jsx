@@ -1,6 +1,7 @@
+
 import React, { useState, useRef, useEffect } from "react";
 
-const Home = () => {
+const Home1 = () => {
   const [input, setInput] = useState("");
   const [file, setFile] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -8,19 +9,73 @@ const Home = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [audioStream, setAudioStream] = useState(null);
   const [mediaRecorder, setMediaRecorder] = useState(null);
-  const messagesEndRef = useRef(null);
   const [socket, setSocket] = useState(null);
+  const [audioSocket, setAudioSocket] = useState(null); // Separate socket for audio chunks
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const [currentAudio, setCurrentAudio] = useState(null);
-  const [audioWebSocket, setAudioWebSocket] = useState(null);
   const [isPodcastActive, setIsPodcastActive] = useState(false);
   const [conversationStage, setConversationStage] = useState(0);
-  const [transcript, setTranscript] = useState("");
-  const ws = useRef(null);
-  const audioContextRef = useRef(null);
-  const workletNodeRef = useRef(null);
-  const [isTaskLoading, setIsTaskLoading] = useState(false); // New state for task loader
+  const messagesEndRef = useRef(null);
 
+
+   // Join the conversation (voice input)
+    // const handleJoinConversation = async () => {
+    //   if (currentAudio) {
+    //     currentAudio.pause();
+    //     currentAudio.currentTime = 0;
+    //     setCurrentAudio(null);
+    //     setIsAudioPlaying(false);
+    //   }
+    
+    //   console.log("WebSocket readyState:", socket.readyState);
+    //   if (socket.readyState !== WebSocket.OPEN) {
+    //     console.error("WebSocket is not open. Unable to send 'chunks' message.");
+    //     return;
+    //   }
+    
+    //   if (!socket || socket.readyState !== WebSocket.OPEN) {
+    //     setMessages((prev) => [
+    //       ...prev,
+    //       {
+    //         type: "system",
+    //         speaker: "System",
+    //         content: "Please start the podcast first before joining the conversation.",
+    //         time: new Date().toLocaleTimeString(),
+    //       },
+    //     ]);
+    //     return;
+    //   }
+    
+    //   // Notify backend to prepare for voice input
+    //   socket.send(JSON.stringify({ message: "chunks" }));
+    
+    //   try {
+    //     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    //     setAudioStream(stream);
+    //     setIsRecording(true);
+    
+    //     const audioContext = new AudioContext();
+    //     const source = audioContext.createMediaStreamSource(stream);
+    //     const processor = audioContext.createScriptProcessor(4096, 1, 1); // Buffer size, 1 input channel, 1 output channel
+    
+    //     processor.onaudioprocess = (event) => {
+    //       if (socket.readyState !== WebSocket.OPEN) return;
+    
+    //       const inputBuffer = event.inputBuffer.getChannelData(0); // Get audio buffer
+    //       const int16Buffer = convertFloat32ToInt16(inputBuffer); // Convert to paInt16 format
+    
+    //       socket.send(int16Buffer); // Send raw 16-bit PCM data
+    //     };
+    
+    //     source.connect(processor);
+    //     processor.connect(audioContext.destination);
+    //     setMediaRecorder(processor);
+    //   } catch (error) {
+    //     console.error("Error setting up voice input:", error);
+    //     setIsRecording(false);
+    //   }
+    // };
+   
   // Initialize messages
   useEffect(() => {
     setMessages([
@@ -39,16 +94,16 @@ const Home = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Close websockets on component unmount
+  // Close WebSocket and audio stream on component unmount
   useEffect(() => {
     return () => {
       if (socket) socket.close();
-      if (audioWebSocket) audioWebSocket.close();
+      if (audioSocket) audioSocket.close();
       if (audioStream) {
         audioStream.getTracks().forEach((track) => track.stop());
       }
     };
-  }, [socket, audioWebSocket, audioStream]);
+  }, [socket, audioSocket, audioStream]);
 
   // Handle input changes
   const handleInputChange = (e) => {
@@ -77,7 +132,6 @@ const Home = () => {
 
     setMessages((prev) => [...prev, newMessage]);
     setIsLoading(true);
-    setIsTaskLoading(true); // Start task loader
 
     try {
       let response;
@@ -133,7 +187,6 @@ const Home = () => {
       ]);
     } finally {
       setIsLoading(false);
-      setIsTaskLoading(false); // Stop task loader
       setInput("");
       setFile(null);
     }
@@ -147,220 +200,199 @@ const Home = () => {
     }
 
     // Close existing socket if any
-    if (ws.current) {
-      ws.current.close();
+    if (socket) {
+      socket.close();
     }
 
-    // Initialize WebSocket if not already initialized
-    if (!ws.current || ws.current.readyState === WebSocket.CLOSED) {
-      ws.current = new WebSocket("ws://127.0.0.1:8000/ws");
+    const newSocket = new WebSocket("ws://localhost:8000/ws");
 
-      ws.current.onopen = () => {
-        console.log("Podcast WebSocket connection established");
-        setIsPodcastActive(true);
-        setMessages((prev) => [
-          ...prev,
-          {
-            type: "system",
-            speaker: "System",
-            content:
-              "Podcast started. Alex and Emma will begin discussing your content.",
-            time: new Date().toLocaleTimeString(),
-          },
-        ]);
-      };
+    newSocket.onopen = () => {
+      console.log("Podcast WebSocket connection established");
+      setIsPodcastActive(true);
+      setMessages((prev) => [
+        ...prev,
+        {
+          type: "system",
+          speaker: "System",
+          content:
+            "Podcast started. Alex and Emma will begin discussing your content.",
+          time: new Date().toLocaleTimeString(),
+        },
+      ]);
+    };
 
-      ws.current.onmessage = async (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          console.log("Received WebSocket message:", data);
+    newSocket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        console.log("Received podcast message:", data);
 
-          // Handle incoming podcast message
-          if (data.speaker && data.text) {
-            // Add message to conversation
-            setMessages((prev) => [
-              ...prev,
-              {
-                type: "ai",
-                speaker: data.speaker,
-                content: data.text.replace("[end_of_query]", ""),
-                time: new Date().toLocaleTimeString(),
-                audioUrl: data.audio,
-              },
-            ]);
+        // Handle incoming podcast message
+        if (data.speaker && data.text) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              type: "ai",
+              speaker: data.speaker,
+              content: data.text.replace("[end_of_query]", ""),
+              time: new Date().toLocaleTimeString(),
+              audioUrl: data.audio,
+            },
+          ]);
 
-            // Update conversation stage
-            if (data.stage) {
-              setConversationStage(data.stage);
-            }
-
-            // Play audio
-            if (data.audio) {
-              // Stop any currently playing audio
-              if (currentAudio) {
-                currentAudio.pause();
-                currentAudio.currentTime = 0;
-              }
-
-              const audio = new Audio(data.audio);
-              setIsAudioPlaying(true);
-              setCurrentAudio(audio);
-
-              audio.onended = () => {
-                setIsAudioPlaying(false);
-                console.log("Audio playback completed.");
-
-                // Send acknowledgment to server
-                if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-                  ws.current.send(JSON.stringify({ message: "Chunks" }));
-                }
-              };
-
-              audio.play().catch((error) => {
-                console.error("Error playing audio:", error);
-                // Still send acknowledgment if audio fails
-                if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-                  ws.current.send(JSON.stringify({ message: "Chunks" }));
-                }
-              });
-            }
+          // Update conversation stage
+          if (data.stage) {
+            setConversationStage(data.stage);
           }
 
-          // Handle recording-related messages
-          if (data.Final) {
-            setTranscript((prev) => prev + " " + data.Final);
-            console.log("Final transcript received:", data.Final);
-
-            // Close the microphone
-            if (audioContextRef.current) {
-              await audioContextRef.current.close();
-              audioContextRef.current = null;
-            }
-            if (workletNodeRef.current) {
-              workletNodeRef.current.disconnect();
-              workletNodeRef.current = null;
-            }
-            setIsRecording(false); // Stop recording state
-            console.log("Microphone closed.");
-            setIsLoading(true)
-            // Send "Yes" response to the server
-            const payload = { message: "Yes", input: data.Final };
-            console.log("Sending to server:", payload);
-            if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-              ws.current.send(JSON.stringify(payload));
+          // Play audio
+          if (data.audio) {
+            if (currentAudio) {
+              currentAudio.pause();
+              currentAudio.currentTime = 0;
             }
 
-            if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-              ws.current.send(JSON.stringify(payload));
-            }
-            console.log("send twice to server:", payload);
-            // Wait for server confirmation
-            const response = await new Promise((resolve) => {
-              const listener = (event) => {
-                try {
-                  const responseData = JSON.parse(event.data);
-                  if (responseData.message === "Yes") {
-                    resolve(responseData);
-                  }
-                } catch (error) {
-                  console.error("Error processing server response:", error);
-                } finally {
-                  ws.current.removeEventListener("message", listener);
-                  setIsLoading(false)
-                }
-              };
-              ws.current.addEventListener("message", listener);
+            const audio = new Audio(data.audio);
+            setIsAudioPlaying(true);
+            setCurrentAudio(audio);
+
+            audio.onended = () => {
+              setIsAudioPlaying(false);
+              console.log("Audio playback completed.");
+              newSocket.send(JSON.stringify({ message: "chunks" }));
+            };
+
+            audio.play().catch((error) => {
+              console.error("Error playing audio:", error);
+              newSocket.send(JSON.stringify({ message: "chunks" }));
             });
-
-            console.log("Server response:", response);
-
-            // Call endpoint_user if server confirms
-            if (response.message === "Yes") {
-              await endpoint_user(user_id, response.input, ws.current);
-              console.log("Loop ended");
-            }
           }
-        } catch (error) {
-          console.error("Error processing WebSocket message:", error);
         }
-      };
+      } catch (error) {
+        console.error("Error processing WebSocket message:", error);
+      }
+    };
 
-      ws.current.onerror = (error) => {
-        console.error("Podcast WebSocket Error:", error);
-        setMessages((prev) => [
-          ...prev,
-          {
-            type: "system",
-            speaker: "System",
-            content:
-              "Error connecting to the podcast service. Please try again.",
-            time: new Date().toLocaleTimeString(),
-          },
-        ]);
-      };
-    }
+    newSocket.onclose = (event) => {
+      console.log("Podcast WebSocket closed:", event.reason);
+      setIsPodcastActive(false);
+    };
+
+    newSocket.onerror = (error) => {
+      console.error("Podcast WebSocket Error:", error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          type: "system",
+          speaker: "System",
+          content: "Error connecting to the podcast service. Please try again.",
+          time: new Date().toLocaleTimeString(),
+        },
+      ]);
+    };
+
+    setSocket(newSocket);
   };
 
-  const startRecording = async () => {
-    if (isRecording) return;
+  // Join the conversation (voice input)
+  const handleJoinConversation = async () => {
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+      alert("Please start the podcast first.");
+      return;
+    }
 
-    // Stop any currently playing audio
+    // Stop currently playing audio
     if (currentAudio) {
       currentAudio.pause();
       currentAudio.currentTime = 0;
       setIsAudioPlaying(false);
     }
 
-    setIsRecording(true);
+    // Close existing audio socket if any
+    if (audioSocket) {
+      audioSocket.close();
+    }
 
-    // Ensure WebSocket is open
-    if (!ws.current || ws.current.readyState === WebSocket.CLOSED) {
-      console.error("WebSocket is not open.");
+    // Open new WebSocket connection for audio chunks
+    const newAudioSocket = new WebSocket("ws://localhost:8000/ws/audio");
+
+    newAudioSocket.onopen = () => {
+      console.log("Audio WebSocket connection established");
+      setIsRecording(true);
+    };
+
+    newAudioSocket.onmessage = async (event) => {
+      try {
+        const data = JSON.parse(event.data);
+
+        if (data.transcript) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              type: "user",
+              speaker: "You",
+              content: data.transcript,
+              time: new Date().toLocaleTimeString(),
+            },
+          ]);
+
+          // Stop recording
+          if (mediaRecorder) {
+            mediaRecorder.stop();
+          }
+          if (audioStream) {
+            audioStream.getTracks().forEach((track) => track.stop());
+          }
+          setIsRecording(false);
+
+          // Send confirmation to backend
+          socket.send(JSON.stringify({ message: "Yes", input: data.transcript }));
+        }
+      } catch (error) {
+        console.error("Error processing WebSocket message:", error);
+      }
+    };
+
+    newAudioSocket.onclose = () => {
+      console.log("Audio WebSocket closed");
       setIsRecording(false);
-      return;
-    }
+    };
 
-    // Send "chunks" message to the server
-    if (ws.current.readyState === WebSocket.OPEN) {
-      ws.current.send(JSON.stringify({ message: "chunks" }));
-    }
+    newAudioSocket.onerror = (error) => {
+      console.error("Audio WebSocket Error:", error);
+      setIsRecording(false);
+    };
 
-    // Get Microphone Input
+    setAudioSocket(newAudioSocket);
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      audioContextRef.current = new AudioContext({ sampleRate: 16000 });
-      const source = audioContextRef.current.createMediaStreamSource(stream);
+      setAudioStream(stream);
 
-      // Load Audio Worklet
-      await audioContextRef.current.audioWorklet.addModule("/processor.js");
+      const recorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
 
-      // Create Worklet Node
-      workletNodeRef.current = new AudioWorkletNode(
-        audioContextRef.current,
-        "audio-processor"
-      );
-      source.connect(workletNodeRef.current);
-      workletNodeRef.current.connect(audioContextRef.current.destination);
-
-      // Send processed audio chunks to WebSocket
-      workletNodeRef.current.port.onmessage = (event) => {
-        if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-          ws.current.send(event.data);
+      recorder.ondataavailable = async (event) => {
+        if (event.data.size > 0 && newAudioSocket.readyState === WebSocket.OPEN) {
+          const reader = new FileReader();
+          reader.readAsDataURL(event.data);
+          reader.onloadend = () => {
+            newAudioSocket.send(
+              JSON.stringify({
+                type: "audio_chunk",
+                data: reader.result,
+              })
+            );
+          };
         }
       };
-      setIsLoading(true)
+
+      recorder.start(100); // Send audio chunks every 100ms
+      setMediaRecorder(recorder);
     } catch (error) {
-      console.error("Error accessing microphone:", error);
+      console.error("Error setting up voice input:", error);
       setIsRecording(false);
     }
   };
 
-  const stopRecording = () => {
-    setIsRecording(false);
-    workletNodeRef.current?.disconnect();
-    audioContextRef.current?.close();
-    console.log("🎤 Recording Stopped");
-  };
 
   return (
     <div className="flex h-screen bg-gray-900 text-gray-200 overflow-hidden">
@@ -710,93 +742,50 @@ const Home = () => {
               </div>
             )}
 
-            {/* Task Loader */}
-            {isTaskLoading && (
-              <div className="flex justify-center items-center p-4">
-                <div className="loader">
-                  <div className="flex space-x-2">
-                    <div className="h-3 w-3 bg-purple-500 rounded-full animate-bounce"></div>
-                    <div
-                      className="h-3 w-3 bg-purple-500 rounded-full animate-bounce"
-                      style={{ animationDelay: "0.2s" }}
-                    ></div>
-                    <div
-                      className="h-3 w-3 bg-purple-500 rounded-full animate-bounce"
-                      style={{ animationDelay: "0.4s" }}
-                    ></div>
-                  </div>
-                </div>
-              </div>
-            )}
-
             <div ref={messagesEndRef} />
           </div>
         </div>
 
         {/* Voice Input Buttons */}
         <div className="p-4 border-t border-gray-700 bg-gray-800 flex space-x-4">
-          {/* Start Podcast Button */}
           <button
             onClick={startPodcast}
-            disabled={isAudioPlaying} // Disable the button while audio is playing
+            disabled={isAudioPlaying}
             className={`w-1/2 py-3 px-4 rounded-lg font-medium flex items-center justify-center ${
               isAudioPlaying
-                ? "bg-gray-600 text-gray-400 cursor-not-allowed" // Disabled button styles
+                ? "bg-gray-600 text-gray-400 cursor-not-allowed"
                 : "bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white transition duration-200 shadow-lg"
             }`}
           >
-            <svg
-              className="w-5 h-5 mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M15 10l4.553 4.553a1 1 0 010 1.414L15 20M9 10l-4.553 4.553a1 1 0 000 1.414L9 20"
-              ></path>
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553 4.553a1 1 0 010 1.414L15 20M9 10l-4.553 4.553a1 1 0 000 1.414L9 20"></path>
             </svg>
             Start Podcast
           </button>
 
-          {/* Join Conversation Button */}
           <button
-            className={`w-1/2 py-3 px-4 rounded-lg font-medium flex items-center justify-center transition duration-200 shadow-lg ${
+            className={`w-1/2 py-3 px-4 rounded-lg font-medium flex items-center justify-center ${
               isRecording
                 ? "bg-red-600 hover:bg-red-700 text-white animate-pulse"
                 : "bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white"
-            }`}
-            onClick={startRecording}
+            } transition duration-200 shadow-lg`}
+            onClick={handleJoinConversation}
           >
-            <svg
-              className="w-5 h-5 mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              {isRecording ? (
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"
-                />
-              ) : (
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
-                />
-              )}
-            </svg>
-            {isRecording
-              ? "Recording... (Stops after 2s of silence)"
-              : "Join Conversation"}
+            {isRecording ? (
+              <span className="flex items-center">
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"></path>
+                </svg>
+                Recording... (Stops after 5s of silence)
+              </span>
+            ) : (
+              <span className="flex items-center">
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
+                </svg>
+                Join Conversation
+              </span>
+            )}
           </button>
         </div>
       </div>
@@ -804,4 +793,4 @@ const Home = () => {
   );
 };
 
-export default Home;
+export default Home1;
