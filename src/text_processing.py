@@ -55,6 +55,11 @@ class TextProcessing:
         - Avoid unnecessary details and repetition.
         - Ensure readability and coherence.
 
+         Note:
+        generate the responses in plain text.
+        do not generate any asterisk or any other special characters.
+
+
         Text:
         {text}
         """
