@@ -28,7 +28,7 @@ const Home = () => {
         type: "ai",
         speaker: "System",
         content:
-          "Welcome to InfernoCastAI! I'm your podcast assistant ready to analyze documents, discuss topics, or answer questions. Upload a file or type your query on the left to begin our conversation.",
+          "Welcome to Tamul AI ! I'm your podcast assistant ready to analyze documents, discuss topics, or answer questions. Upload a file or type your query on the left to begin our conversation.",
         time: new Date().toLocaleTimeString(),
       },
     ]);
@@ -242,7 +242,7 @@ const Home = () => {
             }
             setIsRecording(false); // Stop recording state
             console.log("Microphone closed.");
-            setIsLoading(true)
+            setIsLoading(true);
             // Send "Yes" response to the server
             const payload = { message: "Yes", input: data.Final };
             console.log("Sending to server:", payload);
@@ -266,7 +266,7 @@ const Home = () => {
                   console.error("Error processing server response:", error);
                 } finally {
                   ws.current.removeEventListener("message", listener);
-                  setIsLoading(false)
+                  setIsLoading(false);
                 }
               };
               ws.current.addEventListener("message", listener);
@@ -348,7 +348,7 @@ const Home = () => {
           ws.current.send(event.data);
         }
       };
-      setIsLoading(true)
+      setIsLoading(true);
     } catch (error) {
       console.error("Error accessing microphone:", error);
       setIsRecording(false);
@@ -367,24 +367,15 @@ const Home = () => {
       {/* Left Panel - 40% width */}
       <div className="w-2/5 border-r-2 border-orange-500 flex flex-col p-6 bg-gradient-to-b from-gray-900 to-gray-800">
         <div className="flex items-center mb-8">
-          <div className="flex items-center justify-center h-12 w-12 rounded-full bg-orange-600 mr-3">
-            <svg
-              className="w-7 h-7 text-white"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
-              ></path>
-            </svg>
+          <div className="flex items-center justify-center h-12 w-12 rounded-full bg-orange-600 mr-3 overflow-hidden">
+            <img
+              src="/logo.jpg"
+              alt="Tamul AI Logo"
+              className="w-full h-full object-cover"
+            />
           </div>
-          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-orange-500 to-red-600">
-            InfernoCastAI
+          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-green-500 to-red-600">
+            Tamul AI
           </h1>
         </div>
 
